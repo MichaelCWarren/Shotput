@@ -65,12 +65,13 @@ struct KeyCap: View {
 
 /// Grouped-settings container: `.row` in the design.
 struct SettingsGroup<Content: View>: View {
+    var radius: CGFloat = Theme.Radius.group
     @ViewBuilder var content: Content
     var body: some View {
         VStack(spacing: 0) { content }
-            .background(.white.opacity(0.6), in: RoundedRectangle(cornerRadius: Theme.Radius.group))
+            .background(.white.opacity(0.6), in: RoundedRectangle(cornerRadius: radius))
             .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.group)
+                RoundedRectangle(cornerRadius: radius)
                     .strokeBorder(.black.opacity(0.07), lineWidth: 0.5)
             )
     }
@@ -86,25 +87,30 @@ struct RowDivider: View {
     }
 }
 
-/// Filled pill button used for Copy / Grant / Continue.
+/// Filled pill button used for Copy / Grant / Continue / library footer.
+/// The size defaults match the dropdown's 24pt pill; the library footer uses
+/// height 26 / fontSize 11.5, and the toast uses height 22.
 struct PillButton: View {
     let title: String
     var systemImage: String?
     var prominent: Bool = false
     var enabled: Bool = true
+    var height: CGFloat = 24
+    var fontSize: CGFloat = 11
+    var weight: Font.Weight = .semibold
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 if let systemImage {
-                    Image(systemName: systemImage).font(.system(size: 9, weight: .semibold))
+                    Image(systemName: systemImage).font(.system(size: fontSize * 0.82, weight: .semibold))
                 }
-                Text(title).font(.system(size: 11, weight: .semibold))
+                Text(title).font(.system(size: fontSize, weight: weight))
             }
             .foregroundStyle(prominent ? .white : Theme.label)
             .padding(.horizontal, 10)
-            .frame(height: 24)
+            .frame(height: height)
             .background(
                 prominent ? AnyShapeStyle(Theme.accent.opacity(0.92)) : AnyShapeStyle(Theme.neutral(0.16)),
                 in: Capsule()

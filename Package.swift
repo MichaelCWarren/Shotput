@@ -1,9 +1,8 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// Three targets because this machine has Command Line Tools only: XCTest is
-// absent and Testing.framework is missing lib_TestingInterop.dylib, so
-// `swift test` cannot run. Tests are a plain executable that exits non-zero.
+// Library + thin executable so tests can @testable import the app code.
+// Run tests with ./test.sh, never bare `swift test` — see that script.
 let package = Package(
     name: "Shotput",
     platforms: [.macOS(.v26)],
@@ -11,7 +10,7 @@ let package = Package(
         .target(
             name: "Shotput",
             path: "Sources/Shotput",
-            swiftSettings: [.swiftLanguageMode(.v5), .unsafeFlags(["-enable-testing"])]
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(
             name: "ShotputApp",
@@ -19,7 +18,7 @@ let package = Package(
             path: "Sources/ShotputApp",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        .executableTarget(
+        .testTarget(
             name: "ShotputTests",
             dependencies: ["Shotput"],
             path: "Tests/ShotputTests",

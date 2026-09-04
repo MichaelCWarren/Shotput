@@ -23,9 +23,20 @@ struct Screenshot: Identifiable, Hashable {
     }
 
     var timeText: String {
-        let f = DateFormatter()
-        f.dateFormat = "h:mm a"
-        return f.string(from: created)
+        Self.timeFormatter.string(from: created)
+    }
+
+    /// The library tile caption: the clock time out of the file name
+    /// ("Screenshot 2026-09-03 at 9.41.02" → "9.41.02"), or `timeText` for
+    /// files that were never named by macOS's screenshot tool.
+    var captionText: String {
+        let clockTime: String
+        if let range = name.range(of: " at ", options: .backwards) {
+            clockTime = String(name[range.upperBound...])
+        } else {
+            clockTime = timeText
+        }
+        return "\(clockTime) · \(sizeText)"
     }
 
     /// "9:41 AM · 412 KB · trashes in 7 d"
@@ -40,6 +51,14 @@ struct Screenshot: Identifiable, Hashable {
         }
         return parts.joined(separator: " · ")
     }
+
+    /// Shared because this is read for every visible row on every render,
+    /// and building a DateFormatter costs ~40x what formatting does.
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
 
     static func shortDuration(_ seconds: TimeInterval) -> String {
         let hours = Int(seconds / 3600)

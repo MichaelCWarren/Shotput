@@ -1,0 +1,66 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # The package targets .macOS(.v26), so an older image cannot build it.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - run: swift build
+
+      # Never bare `swift test`: it dies at dlopen when Testing.framework
+      # comes from Command Line Tools. The script falls through to plain
+      # `swift test` when a full Xcode makes the flags unnecessary.
+      - run: ./test.sh
+
+  release:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-26
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # build.sh copies this plist into the bundle and then signs, so the
+      # version has to be stamped before it runs, not after.
+      - name: Stamp the version from the tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Resources/Info.plist
+
+      - run: ./build.sh
+
+      # ditto, not zip: it keeps the bundle's modes and the code signature
+      # intact. A plain `zip` produces an app macOS refuses to launch.
+      - name: Package
+        run: ditto -c -k --keepParent build/Shotput.app Shotput.zip
+
+      - name: Verify the signature survived packaging
+        run: |
+          rm -rf verify && mkdir verify
+          ditto -x -k Shotput.zip verify
+          codesign --verify --deep --strict --verbose=2 verify/Shotput.app
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" Shotput.zip --generate-notes

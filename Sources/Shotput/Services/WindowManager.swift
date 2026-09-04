@@ -130,7 +130,6 @@ final class WindowManager {
                 title: "Shotput Library",
                 extraStyle: .resizable,
                 minSize: NSSize(width: Theme.Metrics.libraryWidth, height: 400),
-                titleVisibility: .hidden,
                 clampsToScreen: true
             )
         case .onboarding:

@@ -212,18 +212,15 @@ struct LibraryView: View {
     }
 }
 
-/// Title, centered search field, grid/list toggle, on their own row below
-/// the traffic lights.
+/// Centered search field and grid/list toggle, on their own row below the
+/// titlebar. The window's own title carries the name, beside the traffic
+/// lights, the way Settings does.
 private struct LibraryToolbar: View {
     @Binding var query: String
     @Binding var layout: LibraryLayout
 
     var body: some View {
         HStack(spacing: 12) {
-            Text("Shotput Library")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.label)
-
             Spacer(minLength: 16)
 
             Picker("Layout", selection: $layout) {
@@ -236,11 +233,10 @@ private struct LibraryToolbar: View {
         }
         .frame(height: LibraryMetrics.headerRow)
         .padding(.horizontal, LibraryMetrics.inset)
-        // Centred on the window rather than on the row, so the title and the
-        // toggle can change width without dragging the field off centre.
+        // Centred on the window rather than on the row, so the toggle can
+        // change width without dragging the field off centre.
         .overlay { searchField }
-        // The window draws no title bar of its own, so the row has to start
-        // below the traffic lights (bottom edge at 23pt).
+        // Clears the 28pt titlebar the content draws under.
         .padding(.top, 28)
         .padding(.bottom, 10)
         .overlay(Divider(), alignment: .bottom)

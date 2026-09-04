@@ -264,25 +264,20 @@ import SwiftUI
         #expect(SemanticSearchField.forwardedKey(.return, modifiers: .option) == .copyText)
     }
 
-    @Test func footerTextBoldsCreditAndOmitsZeroPending() throws {
-        let withPending = AIStatusFooter.text(credit: "llava via Ollama Cloud", blockedReason: nil, pending: 2)
-        #expect(String(withPending.characters) == "Titles & descriptions by llava via Ollama Cloud · indexed locally · 2 pending")
-
-        let boldRuns = withPending.runs.filter { $0.inlinePresentationIntent == .stronglyEmphasized }
-        #expect(boldRuns.count == 1)
-        let boldRun = try #require(boldRuns.first)
-        #expect(String(withPending[boldRun.range].characters) == "llava via Ollama Cloud")
-
-        let zeroPending = AIStatusFooter.text(credit: "llava via Ollama Cloud", blockedReason: nil, pending: 0)
-        #expect(String(zeroPending.characters) == "Titles & descriptions by llava via Ollama Cloud · indexed locally")
+    @Test func footerIsSilentWhenTheQueueIsIdleAndNothingIsBlocking() {
+        #expect(AIStatusFooter.text(blockedReason: nil, pending: 0) == nil)
     }
 
-    @Test func footerShowsBlockedReasonWhenNoCredit() {
-        let blocked = AIStatusFooter.text(credit: nil, blockedReason: "Ollama Cloud needs “Send images to cloud” on", pending: 3)
-        #expect(String(blocked.characters) == "Ollama Cloud needs “Send images to cloud” on")
-        #expect(blocked.runs.filter { $0.inlinePresentationIntent == .stronglyEmphasized }.isEmpty)
+    @Test func footerCountsWhatIsStillBeingDescribed() throws {
+        let one = try #require(AIStatusFooter.text(blockedReason: nil, pending: 1))
+        #expect(String(one.characters) == "Describing 1 screenshot\u{2026}")
 
-        let fallback = AIStatusFooter.text(credit: nil, blockedReason: nil, pending: 0)
-        #expect(String(fallback.characters) == "AI descriptions paused")
+        let many = try #require(AIStatusFooter.text(blockedReason: nil, pending: 2))
+        #expect(String(many.characters) == "Describing 2 screenshots\u{2026}")
+    }
+
+    @Test func footerPrefersTheBlockedReasonOverTheCount() throws {
+        let blocked = try #require(AIStatusFooter.text(blockedReason: "Ollama Cloud needs \u{201C}Send images to cloud\u{201D} on", pending: 3))
+        #expect(String(blocked.characters) == "Ollama Cloud needs \u{201C}Send images to cloud\u{201D} on")
     }
 }

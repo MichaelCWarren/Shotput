@@ -278,7 +278,6 @@ private struct SettingsContent: View {
                 Toggle("", isOn: $settings.autoCopyOnCapture)
                     .labelsHidden()
                     .toggleStyle(.switch)
-                    .tint(Theme.green)
             }
 
             RowDivider()

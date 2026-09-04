@@ -28,16 +28,16 @@ struct ScreenshotRow: View {
                     .foregroundStyle(Theme.secondary(0.55))
                     .lineLimit(1)
             }
-
-            Spacer()
-
-            ScreenshotRowActions(
-                isHighlighted: isHighlighted,
-                isCopied: isCopied,
-                onCopy: onCopy,
-                onCopyText: onCopyText,
-                onAnnotate: onAnnotate
-            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .rowActions(.trailing) {
+                ScreenshotRowActions(
+                    isHighlighted: isHighlighted,
+                    isCopied: isCopied,
+                    onCopy: onCopy,
+                    onCopyText: onCopyText,
+                    onAnnotate: onAnnotate
+                )
+            }
         }
         .contentShape(Rectangle())
         .padding(.vertical, 6)
@@ -96,12 +96,54 @@ struct ScreenshotRowActions: View {
                             .help(help)
                     }
                 }
-                // A fourth control leaves the row too narrow for both the
-                // title and the cluster's ideal width, and the squeeze lands
-                // on the Copy pill's own label ("C…") before the title.
                 .fixedSize()
             }
         }
+    }
+}
+
+/// Hangs a row's action cluster over its text rather than beside it. Laid
+/// out in the row's HStack, the cluster took its width out of the text
+/// column, so highlighting a row re-truncated the title and everything
+/// after it shifted. The text that would run under the buttons fades out
+/// instead.
+private struct RowActionsOverlay<Actions: View>: ViewModifier {
+    let alignment: Alignment
+    let actions: Actions
+
+    /// Zero while the cluster draws nothing, which is also how the row knows
+    /// it has no text to fade.
+    @State private var actionsWidth: CGFloat = 0
+
+    /// The spacing the rows put between the text column and the cluster,
+    /// kept clear so the fade ends where the buttons begin.
+    private let gap: CGFloat = 10
+    private let fadeWidth: CGFloat = 14
+
+    func body(content: Content) -> some View {
+        content
+            .mask { fade }
+            .overlay(alignment: alignment) {
+                actions.onGeometryChange(for: CGFloat.self) { $0.size.width } action: { actionsWidth = $0 }
+            }
+    }
+
+    private var fade: some View {
+        HStack(spacing: 0) {
+            Color.black
+            if actionsWidth > 0 {
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: fadeWidth)
+                Color.clear
+                    .frame(width: actionsWidth + gap)
+            }
+        }
+    }
+}
+
+extension View {
+    func rowActions(_ alignment: Alignment, @ViewBuilder actions: () -> some View) -> some View {
+        modifier(RowActionsOverlay(alignment: alignment, actions: actions()))
     }
 }
 
@@ -142,47 +184,50 @@ enum ScreenshotDrag {
 
     static func fileName(for shot: Screenshot) -> String {
         let original = shot.url.lastPathComponent
-        guard let title = shot.title else { return original }
-        let cleaned = sanitized(title)
-        guard !cleaned.isEmpty else { return original }
         let ext = shot.url.pathExtension
+        // With AI off there is no title, and the capture name it falls back
+        // to is itself full of spaces and dots.
+        let base = shot.title ?? (ext.isEmpty ? original : (original as NSString).deletingPathExtension)
+        let cleaned = sanitized(base)
+        guard !cleaned.isEmpty else { return original }
         return ext.isEmpty ? cleaned : "\(cleaned).\(ext)"
     }
 
-    /// A model can answer with slashes, colons, newlines and a paragraph of
-    /// text, none of which belong in a file name.
+    /// Lowercase kebab: a model can answer with slashes, colons, newlines and
+    /// a paragraph of text, and a capture is named with spaces and dots,
+    /// none of which belong in a name a receiver has to type or quote.
+    /// Alphanumerics survive as they are, so an accented or CJK title stays
+    /// readable rather than folding away to nothing.
     static func sanitized(_ title: String) -> String {
         var out = ""
-        for scalar in title.unicodeScalars {
-            let character: Character
-            if scalar == "/" || scalar == ":" {
-                character = "-"
-            } else if CharacterSet.whitespacesAndNewlines.contains(scalar) || CharacterSet.controlCharacters.contains(scalar) {
-                character = " "
-            } else {
-                character = Character(scalar)
+        for scalar in title.lowercased().unicodeScalars {
+            if CharacterSet.alphanumerics.contains(scalar) {
+                out.unicodeScalars.append(scalar)
+            } else if !out.isEmpty, !out.hasSuffix("-") {
+                out.append("-")
             }
-            if character == " ", out.isEmpty || out.hasSuffix(" ") { continue }
-            out.append(character)
         }
 
         if out.count > maxNameLength {
             let clipped = String(out.prefix(maxNameLength))
-            if let lastSpace = clipped.lastIndex(of: " "), clipped.distance(from: clipped.startIndex, to: lastSpace) > maxNameLength / 2 {
-                out = String(clipped[..<lastSpace])
+            if let lastDash = clipped.lastIndex(of: "-"), clipped.distance(from: clipped.startIndex, to: lastDash) > maxNameLength / 2 {
+                out = String(clipped[..<lastDash])
             } else {
                 out = clipped
             }
         }
 
-        // A leading dot hides the file; a trailing one is a name Finder
-        // refuses.
-        return out.trimmingCharacters(in: CharacterSet(charactersIn: " ."))
+        // Trailing punctuation ("Stripe dashboard...") has already written
+        // its dash by the time the loop runs out. A leading one can't
+        // happen, and a dot never survives at all, so neither the hidden
+        // ".name" nor the "name." Finder refuses can come out of here.
+        while out.hasSuffix("-") { out.removeLast() }
+        return out
     }
 
     /// Two screenshots can be described alike, and a multi-item drag would
     /// then hand the receiver two files with one name. The second becomes
-    /// "… 2", the way a folder would name it.
+    /// "…-2", still kebab.
     static func claim(_ name: String, now: Date = Date()) -> String {
         prune(now: now)
         guard recentNames[name] != nil else {
@@ -193,7 +238,7 @@ enum ScreenshotDrag {
         let ext = (name as NSString).pathExtension
         var index = 2
         while true {
-            let candidate = ext.isEmpty ? "\(base) \(index)" : "\(base) \(index).\(ext)"
+            let candidate = ext.isEmpty ? "\(base)-\(index)" : "\(base)-\(index).\(ext)"
             if recentNames[candidate] == nil {
                 recentNames[candidate] = now
                 return candidate

@@ -133,18 +133,18 @@ struct AIScreenshotRow: View {
                     stateMarker(status)
                 }
             }
-
-            Spacer()
-
-            ScreenshotRowActions(
-                isHighlighted: isHighlighted,
-                isCopied: isCopied,
-                aiAction: status.action,
-                onCopy: onCopy,
-                onCopyText: onCopyText,
-                onAnnotate: onAnnotate,
-                onAIAction: status.action == .retry ? onRetry : onReindex
-            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .rowActions(.topTrailing) {
+                ScreenshotRowActions(
+                    isHighlighted: isHighlighted,
+                    isCopied: isCopied,
+                    aiAction: status.action,
+                    onCopy: onCopy,
+                    onCopyText: onCopyText,
+                    onAnnotate: onAnnotate,
+                    onAIAction: status.action == .retry ? onRetry : onReindex
+                )
+            }
         }
         .contentShape(Rectangle())
         .padding(8)

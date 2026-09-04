@@ -22,8 +22,9 @@ private enum ScreenCapturePreferences {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
         process.arguments = ["SystemUIServer"]
         // A non-zero exit is fine: SystemUIServer relaunches on its own and
-        // the preference is already written.
-        try? process.run()
+        // the preference is already written. Waiting on a process that never
+        // launched raises, so the wait is tied to the launch.
+        guard (try? process.run()) != nil else { return }
         process.waitUntilExit()
     }
 }

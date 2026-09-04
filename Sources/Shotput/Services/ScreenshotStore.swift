@@ -86,6 +86,12 @@ final class ScreenshotStore {
 
             var shot = Screenshot(url: url, created: created, byteSize: byteSize)
             if let existing {
+                // Annotating in Preview saves over the same path, and a
+                // thumbnail is cached with no expiry, so the changed file
+                // needs its old picture thrown out here.
+                if !unchanged {
+                    ThumbnailCache.shared.evict(url)
+                }
                 shot.title = existing.title
                 shot.summary = existing.summary
                 shot.describedBy = existing.describedBy

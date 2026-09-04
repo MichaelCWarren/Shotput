@@ -26,7 +26,7 @@ struct SemanticSearch {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 
-        var matches: [SearchMatch] = []
+        var semanticMatches: [SearchMatch] = []
         var matchedURLs = Set<URL>()
 
         if let embedder, let queryVector = try? await embedder.embed(trimmed) {
@@ -43,8 +43,8 @@ struct SemanticSearch {
                     return SearchMatch(shot: shot, score: score, isSemantic: true)
                 }
                 .sorted { $0.score > $1.score }
-                .prefix(min(semanticLimit, limit))
-            matches.append(contentsOf: semantic)
+                .prefix(semanticLimit)
+            semanticMatches = Array(semantic)
             matchedURLs.formUnion(semantic.map { $0.shot.url })
         }
 
@@ -62,7 +62,11 @@ struct SemanticSearch {
         }
         substringMatches.sort { $0.shot.created > $1.shot.created }
 
-        matches.append(contentsOf: substringMatches)
+        // A substring hit is the one certain match here, and a screenshot
+        // with no vector has no other way in, so the semantic shortlist
+        // gives up slots for them rather than filling `limit` on its own.
+        let reserved = min(substringMatches.count, limit / 2)
+        let matches = semanticMatches.prefix(max(0, limit - reserved)) + substringMatches
         return Array(matches.prefix(limit))
     }
 

@@ -238,7 +238,7 @@ struct ScreenshotThumbnail: View {
         }
     }
 
-    let url: URL
+    let shot: Screenshot
     let style: Style
     @Binding var loaded: NSImage?
 
@@ -272,8 +272,8 @@ struct ScreenshotThumbnail: View {
         }
         .frame(width: style.size.width, height: style.size.height)
         .clipShape(RoundedRectangle(cornerRadius: style.cornerRadius))
-        .task(id: url) {
-            loaded = await ThumbnailCache.shared.thumbnail(for: url)
+        .task(id: shot.thumbnailKey) {
+            loaded = await ThumbnailCache.shared.thumbnail(for: shot.url)
         }
     }
 

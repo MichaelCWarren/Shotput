@@ -15,7 +15,7 @@ struct ScreenshotRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ScreenshotThumbnail(url: shot.url, style: .row, loaded: $loadedThumbnail)
+            ScreenshotThumbnail(shot: shot, style: .row, loaded: $loadedThumbnail)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(shot.displayName)

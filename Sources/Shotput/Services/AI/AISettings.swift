@@ -18,7 +18,11 @@ extension SettingsStore {
             provider: aiProvider,
             model: aiModel,
             sendToCloud: sendToCloud,
-            cloudKey: ollamaCloudKey,
+            // Reading the key is a keychain call that can block on an ACL
+            // dialog, and `AIQueue` asks for this from `ShotputApp.init()`,
+            // before there is a window to explain the wait. Only the cloud
+            // provider ever uses the key, so only it pays for the read.
+            cloudKey: aiProvider.sendsToCloud ? ollamaCloudKey : "",
             ollamaHost: ollamaHost
         )
     }

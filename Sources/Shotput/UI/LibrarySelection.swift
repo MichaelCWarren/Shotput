@@ -19,8 +19,11 @@ struct LibrarySelection {
             }
             anchor = id
         } else if modifiers.contains(.shift) {
-            let start = anchor.flatMap { visible.firstIndex(of: $0) } ?? 0
             guard let end = visible.firstIndex(of: id) else { return }
+            // No anchor yet, or one the search filtered out. Finder selects
+            // just the clicked item there, rather than reaching back to the
+            // top of the grid.
+            let start = anchor.flatMap { visible.firstIndex(of: $0) } ?? end
             let range = start <= end ? start...end : end...start
             ids.formUnion(visible[range])
         } else {

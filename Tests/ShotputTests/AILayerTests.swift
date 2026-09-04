@@ -92,6 +92,26 @@ struct StubEmbedder: Embedder {
     func embed(_ text: String) async throws -> [Float] { vector }
 }
 
+/// Suspends inside `embed`, so a test can queue new work while the vector
+/// backfill is the only thing the worker is doing.
+struct GateEmbedder: Embedder {
+    let id: String
+    let vector: [Float]
+    let onEmbed: @Sendable () async -> Void
+
+    func embed(_ text: String) async throws -> [Float] {
+        await onEmbed()
+        return vector
+    }
+}
+
+/// Holds the queue the gate calls back into, which can only be assigned
+/// after the queue itself is built.
+@MainActor
+final class QueueBox {
+    var queue: AIQueue?
+}
+
 /// Reads as a local provider but points at a host off this Mac, which is
 /// what the queue's own destination check exists for.
 struct RemoteHostProvider: DescriptionProvider {
@@ -365,6 +385,34 @@ private func writeIndexEnvelope(at url: URL, records: [String: AIRecord], failur
         #expect(dropdown.count == 3)
     }
 
+    /// The dropdown asks for 8 and the semantic shortlist is 8, so without
+    /// reserved slots a screenshot that never got a vector could never be
+    /// found by typing a word from its file name.
+    @Test func substringMatchesKeepSlotsAgainstAFullSemanticShortlist() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let index = await AIIndex(fileURL: dir.appendingPathComponent("ai-index.json"))
+        var shots: [Screenshot] = []
+        for i in 0..<12 {
+            let url = try makeScreenshotFile(in: dir, name: "shot-\(i).png")
+            shots.append(Screenshot(url: url, created: Date(), byteSize: 1))
+            await index.set(
+                AIRecord(title: "T\(i)", summary: "s", describedBy: "x", describedAt: Date(), embedderID: "stub", vector: [Float(i + 1) / 100, 1, 0]),
+                for: url
+            )
+        }
+        // No record, so no vector: substring matching is its only way in.
+        let orphanURL = try makeScreenshotFile(in: dir, name: "budget-report.png")
+        shots.append(Screenshot(url: orphanURL, created: Date(), byteSize: 1))
+
+        let embedder = StubEmbedder(id: "stub", vector: [1, 0, 0])
+        let results = await SemanticSearch(index: index, embedder: embedder).search("budget", in: shots, limit: 8)
+
+        #expect(results.count == 8)
+        #expect(results.contains { $0.shot.url == orphanURL })
+        #expect(results.last?.isSemantic == false)
+    }
+
     @Test func semanticSearchIgnoresOtherEmbedder() async throws {
         let dir = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -450,6 +498,65 @@ private func writeIndexEnvelope(at url: URL, records: [String: AIRecord], failur
         #expect(index.record(for: urlB)?.describedBy == "stub-model")
         #expect(index.record(for: urlA)?.vector == [1, 0, 0])
         #expect(Set(described) == Set([urlA, urlB]))
+    }
+
+    /// `backfillVectors` suspends off the main actor and `kick()` is a
+    /// no-op while a worker is alive, so a capture that lands mid-backfill
+    /// is only ever picked up by the worker looking again itself.
+    @Test @MainActor func aCaptureQueuedDuringTheVectorBackfillIsStillDescribed() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let index = AIIndex(fileURL: dir.appendingPathComponent("ai-index.json"))
+        let urlA = try makeScreenshotFile(in: dir, name: "a.png")
+        let urlB = try makeScreenshotFile(in: dir, name: "b.png")
+        // Described but never embedded, which is the state the backfill exists
+        // to repair.
+        index.set(AIRecord(title: "A", summary: "a", describedBy: "stub-model", describedAt: Date(), embedderID: nil, vector: nil), for: urlA)
+        let shotA = Screenshot(url: urlA, created: Date(), byteSize: 1)
+        let shotB = Screenshot(url: urlB, created: Date(), byteSize: 1)
+
+        let box = QueueBox()
+        let embedder = GateEmbedder(id: "stub", vector: [1, 0, 0]) {
+            await MainActor.run { box.queue?.sync([shotA, shotB]) }
+        }
+        let queue = AIQueue(
+            index: index,
+            settings: { AISettings(aiEnabled: true, provider: .ollamaLocal, model: "stub-model", sendToCloud: false, cloudKey: "", ollamaHost: "") },
+            resolveProvider: { _ in StubProvider(description: AIDescription(title: "T", summary: "S")) },
+            blockedReason: { _ in nil },
+            resolveEmbedder: { _ in embedder }
+        )
+        box.queue = queue
+
+        queue.sync([shotA])
+        #expect(queue.pendingCount == 0)
+        await queue.drain()
+
+        #expect(index.record(for: urlB)?.describedBy == "stub-model")
+        #expect(queue.pendingCount == 0)
+        #expect(queue.isRunning == false)
+    }
+
+    /// The same loop must not spin on a queue nothing in it can drain.
+    @Test @MainActor func aBlockedQueueStopsInsteadOfLooping() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let index = AIIndex(fileURL: dir.appendingPathComponent("ai-index.json"))
+        let url = try makeScreenshotFile(in: dir, name: "a.png")
+        let queue = AIQueue(
+            index: index,
+            settings: { AISettings(aiEnabled: true, provider: .ollamaLocal, model: "stub-model", sendToCloud: false, cloudKey: "", ollamaHost: "") },
+            resolveProvider: { _ in nil },
+            blockedReason: { _ in "Ollama isn't running" },
+            resolveEmbedder: { _ in nil }
+        )
+
+        queue.sync([Screenshot(url: url, created: Date(), byteSize: 1)])
+        await queue.drain()
+
+        #expect(queue.pendingCount == 1)
+        #expect(queue.blockedReason == "Ollama isn't running")
+        #expect(queue.isRunning == false)
     }
 
     @Test @MainActor func queueSkipsAlreadyDescribed() async throws {

@@ -59,9 +59,10 @@ final class SettingsStore {
         didSet {
             // Cloud gating: no UI path may leave .ollamaCloud selected while
             // sendToCloud is off, so it lands back on Ollama local here.
+            // Assigning here does not re-enter this observer, so the
+            // corrected value has to be the one that gets written.
             if aiProvider == .ollamaCloud, !sendToCloud {
                 aiProvider = .ollamaLocal
-                return
             }
             defaults.set(aiProvider.rawValue, forKey: Key.aiProvider.rawValue)
         }
@@ -157,11 +158,20 @@ final class SettingsStore {
             .flatMap(CleanupAction.init(rawValue:)) ?? .trash
         keepPinned = defaults.object(forKey: Key.keepPinned.rawValue) as? Bool ?? true
         aiEnabled = defaults.object(forKey: Key.aiEnabled.rawValue) as? Bool ?? false
-        aiProvider = defaults.string(forKey: Key.aiProvider.rawValue)
+        // Both read into locals first: an `@Observable` property's getter
+        // touches `self`, which init can't do until every stored property
+        // has a value.
+        let cloudAllowed = defaults.object(forKey: Key.sendToCloud.rawValue) as? Bool ?? false
+        let storedProvider = defaults.string(forKey: Key.aiProvider.rawValue)
             .flatMap(AIProvider.init(rawValue:)) ?? .ollamaLocal
+        sendToCloud = cloudAllowed
+        // Observers don't run during init, so the cloud gate the setter
+        // enforces is applied to the stored pair by hand: a plist holding
+        // .ollamaCloud with sendToCloud off must not load with the
+        // invariant already broken.
+        aiProvider = storedProvider == .ollamaCloud && !cloudAllowed ? .ollamaLocal : storedProvider
         aiModel = defaults.string(forKey: Key.aiModel.rawValue) ?? "llava:13b"
         ollamaHost = defaults.string(forKey: Key.ollamaHost.rawValue) ?? "http://localhost:11434"
-        sendToCloud = defaults.object(forKey: Key.sendToCloud.rawValue) as? Bool ?? false
         launchAtLogin = defaults.object(forKey: Key.launchAtLogin.rawValue) as? Bool ?? false
         autoCopyOnCapture = defaults.object(forKey: Key.autoCopyOnCapture.rawValue) as? Bool ?? true
         hidesSystemThumbnail = defaults.object(forKey: Key.hidesSystemThumbnail.rawValue) as? Bool ?? false

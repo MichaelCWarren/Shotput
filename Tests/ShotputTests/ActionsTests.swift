@@ -28,6 +28,26 @@ import Foundation
         #expect(!FileManager.default.fileExists(atPath: url.path))
     }
 
+    /// The alert and the cleanup log show `localizedDescription`, so the
+    /// failure `trashItem` gave has to survive rather than be re-wrapped as
+    /// a bare domain and code.
+    @Test func trashThrowsTheUnderlyingFailure() throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let missing = dir.appendingPathComponent("not-here.png")
+
+        #expect(throws: (any Error).self) { try ScreenshotActions.trash([missing]) }
+
+        do {
+            try ScreenshotActions.trash([missing])
+        } catch {
+            let nsError = error as NSError
+            #expect(nsError.domain == NSCocoaErrorDomain)
+            #expect(nsError.code == NSFileNoSuchFileError)
+            #expect(nsError.userInfo[NSFilePathErrorKey] != nil || nsError.userInfo[NSURLErrorKey] != nil)
+        }
+    }
+
     @Test func removeDispatchesOnAction() throws {
         let dir = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: dir) }

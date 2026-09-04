@@ -251,6 +251,48 @@ import Foundation
         #expect(await poll { changes == 1 })
     }
 
+    /// `AIQueue` reads `store.ai` from `ShotputApp.init()`, before there is
+    /// a window to explain a keychain ACL prompt, so only the provider that
+    /// needs the key may pay for the read.
+    @Test func aiSettingsReadTheKeychainOnlyForTheCloudProvider() {
+        let (defaults, name) = testSuite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let secrets = InMemorySecretStore([cloudKeyAccount: "kept-value"])
+        let store = SettingsStore(defaults: defaults, secrets: secrets)
+
+        store.aiProvider = .ollamaLocal
+        #expect(store.ai.cloudKey == "")
+        #expect(secrets.readCount == 0)
+
+        store.sendToCloud = true
+        store.aiProvider = .ollamaCloud
+        #expect(store.ai.cloudKey == "kept-value")
+        #expect(secrets.readCount == 1)
+    }
+
+    @Test func theCloudGateWritesTheProviderItFellBackTo() {
+        let (defaults, name) = testSuite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = SettingsStore(defaults: defaults, secrets: InMemorySecretStore())
+
+        store.aiProvider = .ollamaCloud
+
+        #expect(store.aiProvider == .ollamaLocal)
+        #expect(defaults.string(forKey: "aiProvider") == "ollamaLocal")
+    }
+
+    @Test func aStoredCloudProviderLoadsGatedWhenCloudIsOff() {
+        let (defaults, name) = testSuite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set("ollamaCloud", forKey: "aiProvider")
+        defaults.set(false, forKey: "sendToCloud")
+
+        #expect(SettingsStore(defaults: defaults, secrets: InMemorySecretStore()).aiProvider == .ollamaLocal)
+
+        defaults.set(true, forKey: "sendToCloud")
+        #expect(SettingsStore(defaults: defaults, secrets: InMemorySecretStore()).aiProvider == .ollamaCloud)
+    }
+
     @Test func aKeySetBeforeAnyReadStillClearsTheCleartextCopy() {
         let (defaults, name) = testSuite()
         defer { defaults.removePersistentDomain(forName: name) }

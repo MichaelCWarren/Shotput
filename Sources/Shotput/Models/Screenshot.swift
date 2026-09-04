@@ -28,15 +28,31 @@ struct Screenshot: Identifiable, Hashable {
 
     /// The library tile caption: the clock time out of the file name
     /// ("Screenshot 2026-09-03 at 9.41.02" → "9.41.02"), or `timeText` for
-    /// files that were never named by macOS's screenshot tool.
+    /// files that were never named by macOS's screenshot tool. The name has
+    /// to match the capture pattern first, or "Coffee at the park.png" reads
+    /// its own words back as a time.
     var captionText: String {
         let clockTime: String
-        if let range = name.range(of: " at ", options: .backwards) {
+        if ScreenshotDetection.matchesNamePattern(url.lastPathComponent),
+           let range = name.range(of: " at ", options: .backwards) {
             clockTime = String(name[range.upperBound...])
         } else {
             clockTime = timeText
         }
         return "\(clockTime) · \(sizeText)"
+    }
+
+    /// What a thumbnail is of. An annotation saved in Preview keeps the URL
+    /// and changes the bytes, so a view keyed on the URL alone would go on
+    /// showing the picture from before the edit.
+    struct ThumbnailKey: Hashable {
+        let url: URL
+        let byteSize: Int64
+        let created: Date
+    }
+
+    var thumbnailKey: ThumbnailKey {
+        ThumbnailKey(url: url, byteSize: byteSize, created: created)
     }
 
     /// "9:41 AM · 412 KB · trashes in 7 d"

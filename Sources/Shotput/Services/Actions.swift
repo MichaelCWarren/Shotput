@@ -20,18 +20,18 @@ enum ScreenshotActions {
         }
     }
 
+    /// Throws the failure `trashItem` gave, whose description is what the
+    /// Library's alert and the cleanup log show. Callers treat a partial
+    /// batch as a whole failure and let the next rescan reconcile, so the
+    /// URLs moved before the throw are not reported.
     @discardableResult
     static func trash(_ urls: [URL]) throws -> [URL] {
         var moved: [URL] = []
         for url in urls {
-            do {
-                var resultingURL: NSURL?
-                try FileManager.default.trashItem(at: url, resultingItemURL: &resultingURL)
-                if let resultingURL = resultingURL as URL? {
-                    moved.append(resultingURL)
-                }
-            } catch {
-                throw NSError(domain: (error as NSError).domain, code: (error as NSError).code, userInfo: ["moved": moved])
+            var resultingURL: NSURL?
+            try FileManager.default.trashItem(at: url, resultingItemURL: &resultingURL)
+            if let resultingURL = resultingURL as URL? {
+                moved.append(resultingURL)
             }
         }
         return moved

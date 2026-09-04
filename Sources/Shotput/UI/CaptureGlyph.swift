@@ -49,7 +49,7 @@ extension NSImage {
     @MainActor static func captureGlyph() -> NSImage? {
         let canvas: CGFloat = 18
         let renderer = ImageRenderer(content:
-            CaptureGlyph(side: 13)
+            CaptureGlyph(side: 12)
                 .foregroundStyle(.black)
                 .frame(width: canvas, height: canvas))
         renderer.scale = 2

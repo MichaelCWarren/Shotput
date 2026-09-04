@@ -88,13 +88,26 @@ import Foundation
         #expect(selection.ids == [a, b, c, d])
     }
 
-    @Test func shiftClickWithoutAnchorStartsAtFirst() {
+    @Test func shiftClickWithoutAnchorSelectsOnlyTheClick() {
         let a = URL(fileURLWithPath: "/tmp/a.png")
         let b = URL(fileURLWithPath: "/tmp/b.png")
         let c = URL(fileURLWithPath: "/tmp/c.png")
         var selection = LibrarySelection()
         selection.click(c, in: [a, b, c], modifiers: .shift)
-        #expect(selection.ids == [a, b, c])
+        #expect(selection.ids == [c])
+    }
+
+    /// An anchor the search query filtered out is no anchor: the range has
+    /// to collapse onto the click, not start at the first surviving tile.
+    @Test func shiftClickWithAFilteredOutAnchorSelectsOnlyTheClick() {
+        let a = URL(fileURLWithPath: "/tmp/a.png")
+        let b = URL(fileURLWithPath: "/tmp/b.png")
+        let c = URL(fileURLWithPath: "/tmp/c.png")
+        var selection = LibrarySelection()
+        selection.click(a, in: [a, b, c], modifiers: [])
+        selection.ids = []
+        selection.click(c, in: [b, c], modifiers: .shift)
+        #expect(selection.ids == [c])
     }
 
     @Test func selectAllSelectsOnlyVisible() {

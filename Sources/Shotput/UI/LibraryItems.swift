@@ -151,7 +151,7 @@ struct LibraryTile: View {
             }
         }
         .contentShape(Rectangle())
-        .task(id: shot.url) {
+        .task(id: shot.thumbnailKey) {
             thumbnail = await ThumbnailCache.shared.thumbnail(for: shot.url)
         }
     }
@@ -171,7 +171,7 @@ struct LibraryRow: View {
         let dimmed = status.dimsTitle && shot.title != nil
 
         HStack(alignment: .top, spacing: 10) {
-            ScreenshotThumbnail(url: shot.url, style: .libraryRow, loaded: $thumbnail)
+            ScreenshotThumbnail(shot: shot, style: .libraryRow, loaded: $thumbnail)
 
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {

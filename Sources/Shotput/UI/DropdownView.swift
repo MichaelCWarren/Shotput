@@ -255,14 +255,12 @@ final class DropdownModel {
     var hoveredID: Screenshot.ID?
     var copiedID: Screenshot.ID? { flash.copiedID }
 
+    /// Looks in `shots`, not `days`: an AI match row can be a screenshot
+    /// older than the two days the plain list stops at, and keyboard copy
+    /// reads the focused shot from here.
     var focusedShot: Screenshot? {
-        if let selectedID = selection.selectedID {
-            return days.flatMap(\.shots).first { $0.id == selectedID }
-        }
-        if let hoveredID {
-            return days.flatMap(\.shots).first { $0.id == hoveredID }
-        }
-        return nil
+        guard let id = selection.selectedID ?? hoveredID else { return nil }
+        return shots.first { $0.id == id }
     }
 
     init(

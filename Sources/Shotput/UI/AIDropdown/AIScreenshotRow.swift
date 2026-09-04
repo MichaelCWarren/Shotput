@@ -95,7 +95,7 @@ struct AIScreenshotRow: View {
     var body: some View {
         let status = AIRowStatus(state: item.state)
         HStack(alignment: .top, spacing: 10) {
-            ScreenshotThumbnail(url: shot.url, style: .aiRow, loaded: $loadedThumbnail)
+            ScreenshotThumbnail(shot: shot, style: .aiRow, loaded: $loadedThumbnail)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {

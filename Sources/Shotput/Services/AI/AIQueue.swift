@@ -205,8 +205,14 @@ final class AIQueue {
             worker = nil
         }
 
-        await describeQueued()
-        await backfillVectors()
+        // `backfillVectors` suspends off the main actor, so a capture can
+        // reach the queue after `describeQueued` emptied it, and `kick()` is
+        // a no-op while this worker is alive. Blocked is the one non-empty
+        // exit that must not loop: nothing here would clear it.
+        repeat {
+            await describeQueued()
+            await backfillVectors()
+        } while !queue.isEmpty && blockedReason == nil && !Task.isCancelled
     }
 
     /// A screenshot described while no embedder was available keeps its

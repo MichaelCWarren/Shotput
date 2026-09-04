@@ -300,3 +300,34 @@ import Combine
         #expect(store.countText.contains(dirB.lastPathComponent))
     }
 }
+
+/// `Screenshot`'s derived text and identity, which the library tiles and the
+/// thumbnail views read.
+@Suite struct ScreenshotDisplayTests {
+    @Test func captionUsesTheClockTimeOnlyForACaptureName() {
+        let created = Date(timeIntervalSinceReferenceDate: 0)
+        let capture = Screenshot(url: URL(fileURLWithPath: "/tmp/Screenshot 2026-09-03 at 9.41.02.png"), created: created, byteSize: 1024)
+        #expect(capture.captionText.hasPrefix("9.41.02 · "))
+
+        // A file admitted by the xattr rather than the name: "at" is part of
+        // a sentence, not a timestamp.
+        let named = Screenshot(url: URL(fileURLWithPath: "/tmp/Coffee at the park.png"), created: created, byteSize: 1024)
+        #expect(named.captionText == "\(named.timeText) · \(named.sizeText)")
+    }
+
+    @Test func theThumbnailKeyChangesWhenTheFileBehindTheURLDoes() {
+        let url = URL(fileURLWithPath: "/tmp/a.png")
+        let created = Date(timeIntervalSinceReferenceDate: 0)
+        let before = Screenshot(url: url, created: created, byteSize: 1024)
+        var after = Screenshot(url: url, created: created, byteSize: 2048)
+
+        #expect(before.thumbnailKey != after.thumbnailKey)
+
+        // A description arriving is not a new picture, so the view keyed on
+        // this must not reload for one.
+        after = before
+        after.title = "A title"
+        after.isPinned = true
+        #expect(before.thumbnailKey == after.thumbnailKey)
+    }
+}

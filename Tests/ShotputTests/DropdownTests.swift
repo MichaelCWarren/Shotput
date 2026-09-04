@@ -187,4 +187,36 @@ import SwiftUI
         model.hoveredID = nil
         #expect(model.focusedShot == nil)
     }
+
+    /// An AI match row can be a screenshot older than the two days the plain
+    /// list stops at, so ⏎ and ⌥⏎ on one have to find it.
+    @Test @MainActor func focusedShotFindsAShotOlderThanTheVisibleDays() throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let settings = testSettings(folder: dir)
+        let store = ScreenshotStore(settings: settings, pinsFile: dir.appendingPathComponent("pins.json"))
+        defer { store.stop() }
+
+        try makeScreenshotFile(in: dir, name: "today.png", created: Date())
+        try makeScreenshotFile(in: dir, name: "yesterday.png", created: Date().addingTimeInterval(-86400))
+        let old = try makeScreenshotFile(in: dir, name: "old.png", created: Date().addingTimeInterval(-9 * 86400))
+        store.rescan()
+
+        let model = DropdownModel(
+            store: store,
+            settings: settings,
+            cleanup: CleanupScheduler(store: store, settings: settings),
+            windows: WindowManager(settings: settings, screenshotStore: store),
+            dismiss: {}
+        )
+
+        #expect(model.days.flatMap(\.shots).contains { $0.id == old } == false)
+
+        model.selection.selectedID = old
+        #expect(model.focusedShot?.id == old)
+
+        model.selection.selectedID = nil
+        model.hoveredID = old
+        #expect(model.focusedShot?.id == old)
+    }
 }

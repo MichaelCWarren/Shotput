@@ -8,7 +8,6 @@ import Foundation
 struct StubProvider: DescriptionProvider {
     let kind: AIProvider
     let modelLabel: String
-    let credit = "Stub"
     let description: AIDescription?
     let error: AIError?
     let onDescribe: @Sendable () -> Void
@@ -52,7 +51,6 @@ final class DescribeGate {
 struct GateProvider: DescriptionProvider {
     let kind = AIProvider.ollamaLocal
     let modelLabel = "stub-model"
-    let credit = "Stub"
     let gate: DescribeGate
     var error: AIError?
 
@@ -68,7 +66,6 @@ struct GateProvider: DescriptionProvider {
 struct SelectiveProvider: DescriptionProvider {
     let kind = AIProvider.ollamaLocal
     let modelLabel = "stub-model"
-    let credit = "Stub"
     let failing: String
     let gate: DescribeGate
 
@@ -100,7 +97,6 @@ struct StubEmbedder: Embedder {
 struct RemoteHostProvider: DescriptionProvider {
     let kind = AIProvider.ollamaLocal
     let modelLabel = "stub-model"
-    let credit = "Stub"
     var destination: URL? { URL(string: "http://box.lan:11434") }
     let onDescribe: @Sendable () -> Void
 
@@ -728,14 +724,13 @@ private func writeIndexEnvelope(at url: URL, records: [String: AIRecord], failur
         #expect(throws: AIError.self) { try OllamaProvider.parseDescription(#"{"summary":"x"}"#) }
     }
 
-    @Test func ollamaCredit() {
+    @Test func ollamaProviderReportsItsModelAndWhetherItIsCloud() {
         let cloud = OllamaProvider(client: OllamaClient(host: OllamaClient.cloudHost, apiKey: "k"), model: "llava:13b", kind: .ollamaCloud)
-        #expect(cloud.credit == "llava via Ollama Cloud")
         #expect(cloud.modelLabel == "llava:13b")
         #expect(cloud.isCloud == true)
 
         let local = OllamaProvider(client: OllamaClient(host: OllamaClient.defaultLocalHost, apiKey: nil), model: "llava:13b", kind: .ollamaLocal)
-        #expect(local.credit == "llava via Ollama")
+        #expect(local.modelLabel == "llava:13b")
         #expect(local.isCloud == false)
     }
 

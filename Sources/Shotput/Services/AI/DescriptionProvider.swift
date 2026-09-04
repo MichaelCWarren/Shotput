@@ -37,7 +37,6 @@ struct AIDescription: Equatable, Codable {
 protocol DescriptionProvider: Sendable {
     var kind: AIProvider { get }
     var modelLabel: String { get }
-    var credit: String { get }
     var isCloud: Bool { get }
     /// Where the image bytes go, or nil when they never leave this process.
     var destination: URL? { get }

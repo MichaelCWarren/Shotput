@@ -5,7 +5,6 @@ import Foundation
 struct AppleLocalProvider: DescriptionProvider {
     let kind: AIProvider = .appleLocal
     let modelLabel = "Apple Intelligence"
-    let credit = "Apple Intelligence on-device"
 
     func describe(imageURL: URL) async throws -> AIDescription {
         guard SystemLanguageModel.default.isAvailable else {

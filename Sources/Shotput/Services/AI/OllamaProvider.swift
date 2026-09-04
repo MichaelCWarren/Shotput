@@ -10,11 +10,6 @@ struct OllamaProvider: DescriptionProvider {
 
     var destination: URL? { client.host }
 
-    var credit: String {
-        let family = model.split(separator: ":").first.map(String.init) ?? model
-        return kind == .ollamaCloud ? "\(family) via Ollama Cloud" : "\(family) via Ollama"
-    }
-
     func describe(imageURL: URL) async throws -> AIDescription {
         let imageBase64 = try await Self.encodedImage(at: imageURL)
         let content = try await client.chat(model: model, prompt: Self.prompt, imageBase64: imageBase64)

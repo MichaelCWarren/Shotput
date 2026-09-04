@@ -16,7 +16,7 @@ jobs:
     # The package targets .macOS(.v26), so an older image cannot build it.
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Toolchain
         run: |
@@ -37,7 +37,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # build.sh copies this plist into the bundle and then signs, so the
       # version has to be stamped before it runs, not after.

@@ -46,8 +46,8 @@ final class ShotputApp: NSObject, NSApplicationDelegate {
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "camera", accessibilityDescription: "Shotput")
-            button.image?.isTemplate = true
+            button.image = .captureGlyph()
+            button.image?.accessibilityDescription = "Shotput"
             button.target = self
             button.action = #selector(statusItemClicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])

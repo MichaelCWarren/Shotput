@@ -19,9 +19,9 @@ into `Package.swift`: that builds, runs zero tests, and exits 0.
 
 ## Install with chezmoi
 
-Releases are cut from version tags and carry `Shotput.zip`, a
-`Shotput.app` bundle. `releases/latest/download` is a stable URL, so this
-picks up whatever you last tagged:
+Releases are cut from version tags and carry `Shotput.zip`, holding a
+`Shotput.app` bundle at the top level. `releases/latest/download` is a stable
+URL, so this picks up whatever you last tagged:
 
 ```toml
 # .chezmoiexternal.toml
@@ -33,9 +33,16 @@ picks up whatever you last tagged:
     refreshPeriod = "168h"
 ```
 
-Then `chezmoi apply`. Fetching over HTTP sets no quarantine flag, so the
-ad-hoc signature is not a problem the way it would be for a browser
-download.
+`stripComponents = 1` drops the `Shotput.app/` prefix so `Contents` lands
+inside the destination rather than one level deeper. `exact = true` deletes
+files an older release left behind. `refreshPeriod` is how long chezmoi
+reuses its cached copy; `chezmoi apply --refresh-externals` ignores it.
+
+Verified end to end against the published v0.1.0 with chezmoi 2.72.0: the
+executable bit survives and `codesign --verify --strict` still reports the
+bundle valid and satisfying its designated requirement after chezmoi has
+written every file. Fetching over HTTP sets no quarantine flag, so the
+ad-hoc signature is not the problem it would be for a browser download.
 
 One consequence of ad-hoc signing worth knowing: the signature changes with
 every build, so macOS treats each release as a new app when it reads the
@@ -45,7 +52,7 @@ Always Allow once per update. A Developer ID signature would end it.
 To cut a release:
 
 ```
-git tag v0.2.0 && git push origin v0.2.0
+git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0
 ```
 
 ## Layout

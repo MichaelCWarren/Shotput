@@ -7,7 +7,7 @@ import SwiftUI
 @MainActor
 final class WindowManager {
     enum Kind: Hashable {
-        case settings, library, onboarding
+        case settings, library, onboarding, about
     }
 
     private let settings: SettingsStore
@@ -101,10 +101,12 @@ final class WindowManager {
             AnyView(LibraryView(ai: ai).environment(settings).environment(screenshotStore))
         case .onboarding:
             AnyView(OnboardingView(windows: self).environment(settings))
+        case .about:
+            AnyView(AboutView().environment(screenshotStore))
         }
     }
 
-    /// Everything that differs between the three windows. Every one of them
+    /// Everything that differs between the windows. Every one of them
     /// is translucent, so transparency is applied outside this.
     private struct Layout {
         let width: CGFloat
@@ -134,6 +136,8 @@ final class WindowManager {
             )
         case .onboarding:
             Layout(width: Theme.Metrics.onboardingWidth, title: "")
+        case .about:
+            Layout(width: Theme.Metrics.aboutWidth, title: "")
         }
     }
 

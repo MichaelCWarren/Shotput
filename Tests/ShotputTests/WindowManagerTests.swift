@@ -195,7 +195,10 @@ private struct SettlesAfterFirstLayout: View {
         #expect(appMenu?.title != "Edit")
         #expect(appMenu?.items.isEmpty == false)
         #expect(appMenu?.items.first?.title == "About Shotput")
-        #expect(appMenu?.items.first?.action == #selector(NSApplication.orderFrontStandardAboutPanel(_:)))
+        // The app's own About window, not AppKit's stock panel; a nil target
+        // walks the chain to the delegate that opens it.
+        #expect(appMenu?.items.first?.action == Selector(("openAbout")))
+        #expect(appMenu?.items.first?.target == nil)
     }
 
     @Test func closeIsBoundToCommandW() {

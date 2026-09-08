@@ -63,17 +63,17 @@ final class OnboardingModel {
     static let stepInfo: [StepInfo] = [
         StepInfo(
             title: "Capture folder access",
-            subtitle: "Watch for new screenshots as macOS saves them",
+            subtitle: "So Shotput can see the screenshots macOS is already putting there",
             systemImage: "folder"
         ),
         StepInfo(
             title: "Save-folder access",
-            subtitle: "Pick where screenshots are saved so Shotput can read and clean them up",
+            subtitle: "Point at where they land. It's the Desktop. It's always the Desktop",
             systemImage: "folder.badge.gearshape"
         ),
         StepInfo(
             title: "Trash access",
-            subtitle: "Lets auto-cleanup move old screenshots to the Trash",
+            subtitle: "For the tidying up you were definitely going to do yourself",
             systemImage: "trash"
         )
     ]
@@ -124,12 +124,12 @@ final class OnboardingModel {
 
     var hint: String {
         if let gatingIndex = [0, 1].first(where: { states[$0] != .passed }) {
-            return "Continue enables after \(Self.stepInfo[gatingIndex].title) is granted"
+            return "Continue wakes up once \(Self.stepInfo[gatingIndex].title) is granted"
         }
         if states[2] != .passed {
-            return "Trash access is optional. Auto-cleanup will ask for it when it first runs."
+            return "Trash access is optional. Auto-cleanup will come asking the first time it runs anyway."
         }
-        return "All set. You can revisit this from the menu bar."
+        return "Granted, all three. The menu bar remembers where this lives."
     }
 
     func recheck() async {
@@ -250,7 +250,7 @@ private struct OnboardingContent: View {
                 .kerning(-0.19)
                 .foregroundStyle(Theme.label)
 
-            Text("Your screenshots, one click from the clipboard. Three quick permissions and you're set.")
+            Text("Your screenshots, one click from the clipboard. macOS just wants to ask three times whether you meant it.")
                 .font(.system(size: 12.5))
                 .lineSpacing(6)
                 .multilineTextAlignment(.center)

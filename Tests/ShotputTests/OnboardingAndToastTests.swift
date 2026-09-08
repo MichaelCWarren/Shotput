@@ -17,7 +17,7 @@ import AppKit
         await gated.recheck()
         #expect(gated.nextPendingIndex == 1)
         #expect(gated.canContinue == false)
-        #expect(gated.hint == "Continue enables after Save-folder access is granted")
+        #expect(gated.hint == "Continue wakes up once Save-folder access is granted")
         // Row 3 gets no trailing control unless it's the first unpassed step.
         #expect(gated.nextPendingIndex != 2)
 
@@ -29,7 +29,7 @@ import AppKit
         )
         await trashOptional.recheck()
         #expect(trashOptional.canContinue == true)
-        #expect(trashOptional.hint == "Trash access is optional. Auto-cleanup will ask for it when it first runs.")
+        #expect(trashOptional.hint == "Trash access is optional. Auto-cleanup will come asking the first time it runs anyway.")
 
         let allPassed = OnboardingModel(
             settings: testSettings(folder: dir),
@@ -38,7 +38,7 @@ import AppKit
             checkTrash: { .passed }
         )
         await allPassed.recheck()
-        #expect(allPassed.hint == "All set. You can revisit this from the menu bar.")
+        #expect(allPassed.hint == "Granted, all three. The menu bar remembers where this lives.")
     }
 
     @Test func captureFolderCheckReportsListingFailure() throws {

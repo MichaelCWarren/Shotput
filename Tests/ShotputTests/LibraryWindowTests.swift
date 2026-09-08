@@ -133,6 +133,18 @@ import Foundation
         #expect(selection.ids == [a])
     }
 
+    @Test func previewerServesEverySelectedUrl() {
+        let a = URL(fileURLWithPath: "/tmp/a.png")
+        let b = URL(fileURLWithPath: "/tmp/b.png")
+        let previewer = QuickLookPreviewer()
+        previewer.urls = [a, b]
+
+        #expect(previewer.numberOfPreviewItems(in: nil) == 2)
+        #expect(previewer.previewPanel(nil, previewItemAt: 1) as? NSURL == b as NSURL)
+        // The panel can ask for a stale index between reloads.
+        #expect(previewer.previewPanel(nil, previewItemAt: 7) == nil)
+    }
+
     @Test func footerTextCountsAndSums() {
         let first = Screenshot(url: URL(fileURLWithPath: "/tmp/first.png"), created: Date(), byteSize: 412_000)
         let second = Screenshot(url: URL(fileURLWithPath: "/tmp/second.png"), created: Date(), byteSize: 1_100_000)

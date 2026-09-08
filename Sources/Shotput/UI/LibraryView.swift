@@ -32,6 +32,9 @@ struct LibraryView: View {
     @State private var selection = LibrarySelection()
     @State private var search: AIDropdownModel
     @State private var isSearching = false
+    @State private var previewer = QuickLookPreviewer()
+    @FocusState private var searchFocused: Bool
+    @FocusState private var gridFocused: Bool
     @Namespace private var dragNamespace
     @AppStorage("libraryLayout") private var layout: LibraryLayout = .grid
 
@@ -74,7 +77,7 @@ struct LibraryView: View {
             Theme.glassBackground(radius: Theme.Radius.window)
 
             VStack(spacing: 0) {
-                LibraryToolbar(query: $search.query, layout: $layout)
+                LibraryToolbar(query: $search.query, layout: $layout, focused: $searchFocused)
 
                 if days.isEmpty {
                     LibraryEmptyState(
@@ -94,6 +97,7 @@ struct LibraryView: View {
                                     ai: ai,
                                     dragNamespace: dragNamespace,
                                     selection: $selection,
+                                    onFocusGrid: focusGrid,
                                     visibleIDs: visibleIDs,
                                     allDays: days,
                                     onCopy: copySelection,
@@ -132,15 +136,35 @@ struct LibraryView: View {
                 }
             }
 
-            Button("") { selection.selectAll(visibleIDs) }
-                .keyboardShortcut("a", modifiers: .command)
-                .opacity(0)
-                .frame(width: 0, height: 0)
+            Button("") {
+                selection.selectAll(visibleIDs)
+                focusGrid()
+            }
+            .keyboardShortcut("a", modifiers: .command)
+            .opacity(0)
+            .frame(width: 0, height: 0)
         }
         .ignoresSafeArea()
         .frame(minWidth: Theme.Metrics.libraryWidth, minHeight: 400)
-        .onExitCommand { selection.ids = [] }
-        .task { search.allShots = store.shots }
+        // Space is a character in the search field and Quick Look everywhere
+        // else, so the two take turns holding focus: the field has it while
+        // the user types, a click on a tile hands it to this container.
+        .focusable()
+        .focusEffectDisabled()
+        .focused($gridFocused)
+        .onKeyPress(.space) {
+            guard !searchFocused, !selectedShots.isEmpty else { return .ignored }
+            previewer.toggle(selectedShots.map(\.url))
+            return .handled
+        }
+        .onExitCommand {
+            previewer.close()
+            selection.ids = []
+        }
+        .task {
+            search.allShots = store.shots
+            searchFocused = true
+        }
         .onChange(of: store.days.flatMap(\.shots).map(\.id)) { _, ids in
             selection.prune(keeping: Set(ids))
             search.allShots = store.shots
@@ -160,6 +184,11 @@ struct LibraryView: View {
     }
 
     // MARK: - Actions
+
+    private func focusGrid() {
+        searchFocused = false
+        gridFocused = true
+    }
 
     /// A file trashed or renamed underneath the library is still in the store
     /// until the watcher rescans, so a copy can fail on a row the user can see.
@@ -218,6 +247,7 @@ struct LibraryView: View {
 private struct LibraryToolbar: View {
     @Binding var query: String
     @Binding var layout: LibraryLayout
+    var focused: FocusState<Bool>.Binding
 
     var body: some View {
         HStack(spacing: 12) {
@@ -250,6 +280,7 @@ private struct LibraryToolbar: View {
             TextField("Search screenshots", text: $query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
+                .focused(focused)
         }
         .popupChrome()
         .frame(width: 280)
@@ -263,6 +294,7 @@ private struct LibraryDaySection: View {
     let ai: AICoordinator?
     let dragNamespace: Namespace.ID
     @Binding var selection: LibrarySelection
+    let onFocusGrid: () -> Void
     let visibleIDs: [URL]
     let allDays: [ScreenshotDay]
     let onCopy: ([URL]) -> Void
@@ -313,6 +345,7 @@ private struct LibraryDaySection: View {
     private func click(_ id: URL) {
         let modifiers = NSApp.currentEvent?.modifierFlags ?? []
         selection.click(id, in: visibleIDs, modifiers: modifiers)
+        onFocusGrid()
     }
 
     /// `contextMenu`'s content closure is the only hook SwiftUI runs before

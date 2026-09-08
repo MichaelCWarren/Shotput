@@ -41,6 +41,7 @@ enum Theme {
         static let settingsWidth: CGFloat = 480
         static let libraryWidth: CGFloat = 690
         static let onboardingWidth: CGFloat = 440
+        static let aboutWidth: CGFloat = 380
         static let toastWidth: CGFloat = 330
     }
 

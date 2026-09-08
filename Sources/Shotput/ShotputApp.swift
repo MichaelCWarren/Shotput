@@ -92,7 +92,7 @@ final class ShotputApp: NSObject, NSApplicationDelegate {
         let appMenu = NSMenu()
         appMenu.addItem(
             withTitle: "About \(appName)",
-            action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+            action: #selector(openAbout),
             keyEquivalent: ""
         )
         appItem.submenu = appMenu
@@ -150,14 +150,20 @@ final class ShotputApp: NSObject, NSApplicationDelegate {
 
     private func showContextMenu() {
         let menu = NSMenu()
+        menu.addItem(withTitle: "About Shotput", action: #selector(openAbout), keyEquivalent: "").target = self
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Permissions…", action: #selector(openPermissions), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Open Library", action: #selector(openLibrary), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Shotput", action: #selector(quit), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "").target = self
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
+    }
+
+    @objc private func openAbout() {
+        windows.show(.about)
     }
 
     @objc private func openSettings() {

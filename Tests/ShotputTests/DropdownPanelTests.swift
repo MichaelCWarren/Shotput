@@ -31,6 +31,12 @@ import SwiftUI
         #expect(panel.frame.height >= 300)
     }
 
+    @Test func previewPanelSitsAboveTheDropdown() {
+        _ = NSApplication.shared
+        let panel = DropdownPanel(rootView: AnyView(DropdownPlaceholderView()))
+        #expect(QuickLookPreviewer.panelLevel.rawValue > panel.level.rawValue)
+    }
+
     @Test func hideIsIdempotent() {
         _ = NSApplication.shared
         let panel = DropdownPanel(rootView: AnyView(DropdownPlaceholderView()))
